@@ -50,6 +50,9 @@ class LibraryTree:
                 results.append(book)
         return results
 
+    def clear(self):
+        self.root = None
+
 class DoublyLinkedListNode:
     def __init__(self, borrower):
         self.borrower = borrower
@@ -111,6 +114,9 @@ class BorrowerList:
             return borrower
         return None
 
+    def clear(self):
+        self.head = None
+        self.tail = None
 
 
 class BorrowedItems:
@@ -129,3 +135,6 @@ class BorrowedItems:
                 self.items.remove(item)
                 return item
         return None
+    
+    def clear(self):
+        self.items = []

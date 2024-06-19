@@ -7,6 +7,10 @@ import random
 import sys
 from datetime import datetime, timedelta
 
+# Import the classes
+from models import Book, Periodical, AudioBook, Borrower, BorrowedItem
+from data_structures import LibraryTree, BorrowerList, BorrowedItems
+
 app = Flask(__name__)
 
 app.secret_key = 'abcd2123445'  
@@ -15,6 +19,82 @@ db=MySQLdb.connect(host="localhost",user="root",
 cursor = db.cursor(MySQLdb.cursors.DictCursor)
 
 
+
+# populate the data structures
+# Global instances of data structures
+library_tree = LibraryTree()
+borrower_list = BorrowerList()
+borrowed_items = BorrowedItems()
+
+# Function to populate data structures from the database
+def populate_data_structures():
+    populate_library_tree()
+    populate_borrower_list()
+    populate_borrowed_items()
+
+def populate_library_tree():
+    library_tree.clear()
+    
+    cursor.execute("SELECT * FROM book")
+    books = cursor.fetchall()
+
+    # Fetch all audiobooks
+    cursor.execute("SELECT * FROM audiobook")
+    audiobooks = cursor.fetchall()
+    audiobook_dict = {ab['bookid']: ab['audioformat'] for ab in audiobooks}
+
+    cursor.execute("SELECT * FROM periodical")
+    periodicals = cursor.fetchall()
+    periodical_list = [p['bookid'] for p in periodicals]
+
+    for book_data in books:
+        if book_data['bookid'] in periodical_list:
+            book = Periodical(
+                book_data['bookid'], book_data['author'], book_data['title'],
+                book_data['isbn'], book_data['category'], book_data['year'],
+                book_data['language']
+            )
+        elif book_data['bookid'] in audiobook_dict.keys():
+            audioformat = audiobook_dict[book_data['bookid']]
+            book = AudioBook(
+                book_data['bookid'], book_data['author'], book_data['title'],
+                book_data['isbn'], book_data['category'], book_data['year'],
+                book_data['language'], audioformat
+            )
+        else:
+            book = Book(
+                book_data['bookid'], book_data['author'], book_data['title'],
+                book_data['isbn'], book_data['category'], book_data['year'],
+                book_data['language']
+            )
+        library_tree.insert(book)
+
+
+
+def populate_borrower_list():
+    borrower_list.clear()
+    cursor.execute("SELECT * FROM borrower")
+    borrowers = cursor.fetchall()
+    for borrower_data in borrowers:
+        borrower = Borrower(
+            borrower_data['borrowerid'], borrower_data['firstname'],
+            borrower_data['lastname'], borrower_data['email'],
+            borrower_data['password'], borrower_data['role']
+        )
+        borrower_list.append(borrower)
+
+def populate_borrowed_items():
+    borrowed_items.clear()
+    cursor.execute("SELECT * FROM borrowed")
+    borrowed_records = cursor.fetchall()
+    for record in borrowed_records:
+        borrowed_items.add_item(
+            record['borrowerid'], record['bookid'], record['borrowdate']
+        )
+
+
+# Call the populate function on startup
+populate_data_structures()
 
 
 @app.route('/')
