@@ -1,0 +1,65 @@
+{% include 'header.html' %}
+{% include 'adminnav.html' %}
+<body>
+    <div class="container">
+        <h3 class="text-center">Edit Book</h3>
+        <form method="POST" action="{{ url_for('edit_book', bookid=book.bookid) }}">
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ book.title }}" required>
+            </div>
+            <div class="form-group">
+                <label for="author">Author</label>
+                <input type="text" class="form-control" id="author" name="author" value="{{ book.author }}" required>
+            </div>
+            <div class="form-group">
+                <label for="isbn">ISBN</label>
+                <input type="text" class="form-control" id="isbn" name="isbn" value="{{ book.isbn }}" required>
+            </div>
+            <div class="form-group">
+                <label for="category">Category</label>
+                <input type="text" class="form-control" id="category" name="category" value="{{ book.category }}" required>
+            </div>
+            <div class="form-group">
+                <label for="year">Year</label>
+                <input type="text" class="form-control" id="year" name="year" value="{{ book.year }}" required>
+            </div>
+            <div class="form-group">
+                <label for="language">Language</label>
+                <input type="text" class="form-control" id="language" name="language" value="{{ book.language }}" required>
+            </div>
+            <div class="form-group">
+                <label for="type">Type</label>
+                <select class="form-control" id="type" name="type" required>
+                    <option value="book" {% if book.type == 'book' %}selected{% endif %}>Book</option>
+                    <option value="audio" {% if book.type == 'audio' %}selected{% endif %}>Audio Book</option>
+                    <option value="periodical" {% if book.type == 'periodical' %}selected{% endif %}>Periodical</option>
+                </select>
+            </div>
+            <div id="additional-fields"></div>
+            <button type="submit" class="btn btn-primary">Update Book</button>
+        </form>
+    </div>
+    <script>
+        $(document).ready(function() {
+        function loadAdditionalFields(type, book) {
+            var additionalFields = $('#additional-fields');
+            additionalFields.empty();
+            
+            if (type === 'audio') {
+                additionalFields.append('<div class="form-group"><label for="audio_format">Audio Format</label><input type="text" class="form-control" id="audio_format" name="audio_format" value="' + (book.audio_format || '') + '" required></div>');
+            }
+        }
+
+        var initialType = $('#type').val();
+        var book = JSON.parse('{{ book | tojson | safe }}');
+        loadAdditionalFields(initialType, book);
+
+        $('#type').change(function() {
+            var type = $(this).val();
+            loadAdditionalFields(type, {});
+        });
+    });
+
+    </script>
+</body>

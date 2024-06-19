@@ -1,0 +1,31 @@
+{% include 'header.html' %}
+{% include 'navbar.html' %}
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h2 class="text-center mt-4">Book Details</h2>
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3>{{ book.title }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Book ID:</strong> {{ book.bookid }}</p>
+                        <p><strong>Author:</strong> {{ book.author }}</p>
+                        <p><strong>ISBN:</strong> {{ book.isbn }}</p>
+                        <p><strong>Category:</strong> {{ book.category }}</p>
+                        <p><strong>Year:</strong> {{ book.year }}</p>
+                        <p><strong>Language:</strong> {{ book.language }}</p>
+                        <p><strong>Type:</strong> {{ book.book_type }}</p>
+                        {% if book.book_type == 'Audiobook' %}
+                        <p><strong>Audio Format:</strong> {{ book.audioformat }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="{{ url_for('borrower') }}" class="btn btn-primary">Back to Book List</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>

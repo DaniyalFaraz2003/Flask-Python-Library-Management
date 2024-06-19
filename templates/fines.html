@@ -1,0 +1,49 @@
+{% include 'header.html' %}
+{% include 'navbar.html' %}
+
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <h2 class="text-center mt-4">Fines</h2>
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3>Fines List</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fine ID</th>
+                                    <th>Title</th>
+                                    <th>Borrow Date</th>
+                                    <th>Due Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fine in fines %}
+                                <tr>
+                                    <td>{{ fine.fineid }}</td>
+                                    <td>{{ fine.title }}</td>
+                                    <td>{{ fine.borrowdate }}</td>
+                                    <td>{{ fine.duedate }}</td>
+                                    <td>${{ fine.amount }}</td>
+                                    <td>{{ fine.status }}</td>
+                                    <td>
+                                        {% if fine.status == 'unpaid' %}
+                                            <td><a href="{{url_for('pay_fine', fineid=fine.fineid)}}" class="btn btn-primary">Pay</a></td>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>

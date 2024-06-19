@@ -1,0 +1,51 @@
+{% include 'header.html' %}
+{% include 'navbar.html' %}
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <h2 class="text-center mt-4">Borrowed Books</h2>
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3>Borrowed Books List</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Book ID</th>
+                                    <th>Title</th>
+                                    <th>Author</th>
+                                    <th>Borrow Date</th>
+                                    <th>Due Date</th>
+                                    <th>Return Date</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for book in borrowed_books %}
+                                <tr>
+                                    <td>{{ book.bookid }}</td>
+                                    <td>{{ book.title }}</td>
+                                    <td>{{ book.author }}</td>
+                                    <td>{{ book.borrowdate }}</td>
+                                    <td>{{ book.duedate }}</td>
+                                    <td>{{ book.returndate if book.returndate else 'Not Returned' }}</td>
+                                    <td>{{ book.status }}</td>
+                                    <td><a href="{{url_for('view_book', bookid=book.bookid)}}" class="btn btn-primary">View</a></td>
+                                    {% if not book.returndate %}
+                                        <td><a href="{{url_for('return_book', borrowedid=book.borrowedid)}}" class="btn btn-primary">Return</a></td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

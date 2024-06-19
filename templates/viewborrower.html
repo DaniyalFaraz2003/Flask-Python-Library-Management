@@ -1,0 +1,48 @@
+{% include 'header.html' %}
+{% include 'adminnav.html' %}
+<body>
+    <div class="container mt-4">
+        <h2>Borrower Details</h2>
+        <h3>Name: {{ borrower.firstname }} {{ borrower.lastname }}</h3>
+        <h4>Email: {{ borrower.email }}</h4>
+        
+        <h3>Borrowed Books:</h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Return Status</th>
+                    <th>Apply Fine</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for borrowed_book in borrower.borrowed_books %}
+                <tr>
+                    <td>{{ borrowed_book.bookid }}</td>
+                    <td>{{ borrowed_book.title }}</td>
+                    <td>{{ borrowed_book.borrowdate }}</td>
+                    <td>{{ borrowed_book.duedate }}</td>
+                    <td>
+                        {% if borrowed_book.returndate %}
+                            Returned on {{ borrowed_book.returndate }}
+                        {% else %}
+                            Not Returned
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not borrowed_book.returndate %}
+                            <a href="/apply_fine/{{ borrowed_book.borrowedid }}/{{ borrower.borrowerid }}" class="btn btn-danger">Apply Fine</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
