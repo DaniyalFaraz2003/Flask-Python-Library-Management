@@ -42,21 +42,51 @@ def login():
             mesage = 'Please enter correct email / password !'
     return render_template('login.html', mesage = mesage)
     
+# Route for borrowing a book
 @app.route("/borrow_book")
 def borrow_book():
     if 'loggedin' in session:
         borrowBookId = request.args.get('bookid')
+        error_message = ""
         
-        current_date = datetime.now().date()
-        three_months_later = current_date + timedelta(days=90)  # Approximation of 3 months
-
+        # Count current borrowed unreturned books
         cursor.execute("""
-            INSERT INTO borrowed (bookid, borrowerid, borrowdate, duedate, returndate)VALUES (%s, %s, %s, %s, %s)
-        """, (borrowBookId, session['userid'], current_date, three_months_later, "NULL"))
-        db.commit()
+            SELECT COUNT(*) AS num_borrowed
+            FROM borrowed
+            WHERE borrowerid = %s AND returndate = '0000-00-00 00:00:00'
+        """, (session['userid'],))
+        num_borrowed_unreturned = cursor.fetchone()['num_borrowed']
+        
+        # Check if there are any unpaid fines
+        cursor.execute("""
+            SELECT COUNT(*) AS num_unpaid_fines
+            FROM fine f
+            JOIN borrowed b ON f.borrowedid = b.borrowedid
+            WHERE b.borrowerid = %s AND f.status = 'unpaid'
+        """, (session['userid'],))
+        num_unpaid_fines = cursor.fetchone()['num_unpaid_fines']
+        
+        # Only allow borrowing if conditions are met
+        if num_borrowed_unreturned < 8 and num_unpaid_fines == 0:
+            current_date = datetime.now().date()
+            three_months_later = current_date + timedelta(days=90)  # Approximation of 3 months
 
+            cursor.execute("""
+                INSERT INTO borrowed (bookid, borrowerid, borrowdate, duedate, returndate)
+                VALUES (%s, %s, %s, %s, 'NULL')
+            """, (borrowBookId, session['userid'], current_date, three_months_later))
+            db.commit()
 
+            
+        else:
+            # Handle case where conditions are not met
+            if num_borrowed_unreturned >= 8:
+                error_message = "You have reached the maximum limit of borrowed unreturned books."
+            elif num_unpaid_fines > 0:
+                error_message = "You have unpaid fines. Please clear your fines before borrowing."
+            
         return redirect(url_for("borrower"))
+        
     return redirect(url_for('login'))
 
 @app.route('/logout')
