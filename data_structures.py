@@ -74,6 +74,14 @@ class BorrowerList:
             new_node.prev = self.tail
             self.tail = new_node
 
+    def findWithEmailPassword(self, email, password):
+        current = self.head
+        while current:
+            if current.borrower.email == email and current.borrower.password == password:
+                return current.borrower
+            current = current.next
+        return None
+
     def find(self, borrowerid):
         current = self.head
         while current:

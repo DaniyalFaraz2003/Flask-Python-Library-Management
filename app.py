@@ -105,16 +105,17 @@ def login():
         email = request.form['email']
         password = request.form['password']
         
-        cursor.execute('SELECT * FROM borrower WHERE email = % s AND password = % s', (email, password, ))
-        user = cursor.fetchone()
+        # cursor.execute('SELECT * FROM borrower WHERE email = % s AND password = % s', (email, password, ))
+        # user = cursor.fetchone()
+        user = borrower_list.findWithEmailPassword(email, password)
         if user:
             session['loggedin'] = True
-            session['userid'] = user['borrowerid']
-            session['name'] = user['firstname']
-            session['email'] = user['email']
-            session['role'] = user['role']
+            session['userid'] = user.borrowerid
+            session['name'] = user.firstname
+            session['email'] = user.email
+            session['role'] = user.role
             mesage = 'Logged in successfully !'            
-            if user['role'] == "admin":
+            if user.role == "admin":
                 return redirect(url_for('admin'))
             else:
                 return redirect(url_for('borrower'))
