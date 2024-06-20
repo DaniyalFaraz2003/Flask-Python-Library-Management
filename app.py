@@ -105,8 +105,6 @@ def login():
         email = request.form['email']
         password = request.form['password']
         
-        # cursor.execute('SELECT * FROM borrower WHERE email = % s AND password = % s', (email, password, ))
-        # user = cursor.fetchone()
         user = borrower_list.findWithEmailPassword(email, password)
         if user:
             session['loggedin'] = True
@@ -158,6 +156,7 @@ def borrow_book():
             """, (borrowBookId, session['userid'], current_date, three_months_later))
             db.commit()
 
+            borrowed_items.add_item(session['userid'], borrowBookId, current_date)
             
         else:
             # Handle case where conditions are not met
@@ -199,6 +198,7 @@ def register():
             cursor.execute('INSERT INTO borrower (firstname, lastname, email, password, role) VALUES (% s, % s, % s, %s, %s)', (firstname, lastname, email, password, role))
             db.commit()
             mesage = 'You have successfully registered !'
+            borrower_list.append(Borrower(cursor.lastrowid, firstname, lastname, email, password, role))
     elif request.method == 'POST':
         mesage = 'Please fill out the form !'
     return render_template('register.html', mesage = mesage)
@@ -207,22 +207,37 @@ def register():
 def view_book():
     # SQL query to get book details and its type (book, periodical, audiobook)
     viewBookId = request.args.get('bookid')
-    sql_query = """
-    SELECT b.bookid, b.title, b.author, b.isbn, b.category, b.year, b.language,
-            CASE
-                WHEN p.bookid IS NOT NULL THEN 'Periodical'
-                WHEN a.bookid IS NOT NULL THEN 'Audiobook'
-                ELSE 'Book'
-            END AS book_type,
-            a.audioformat
-    FROM book b
-    LEFT JOIN periodical p ON b.bookid = p.bookid
-    LEFT JOIN audiobook a ON b.bookid = a.bookid
-    WHERE b.bookid = %s
-    """
+    # sql_query = """
+    # SELECT b.bookid, b.title, b.author, b.isbn, b.category, b.year, b.language,
+    #         CASE
+    #             WHEN p.bookid IS NOT NULL THEN 'Periodical'
+    #             WHEN a.bookid IS NOT NULL THEN 'Audiobook'
+    #             ELSE 'Book'
+    #         END AS book_type,
+    #         a.audioformat
+    # FROM book b
+    # LEFT JOIN periodical p ON b.bookid = p.bookid
+    # LEFT JOIN audiobook a ON b.bookid = a.bookid
+    # WHERE b.bookid = %s
+    # """
 
-    cursor.execute(sql_query, (viewBookId,))
-    book = cursor.fetchone()
+    # cursor.execute(sql_query, (viewBookId,))
+    # book = cursor.fetchone()
+    book = dict().fromkeys(['bookid', 'title', 'author', 'isbn', 'category', 'year', 'language', 'book_type', 'audioformat'], None)
+    retrieved_book = library_tree.search(int(viewBookId))
+    if retrieved_book:
+        book['bookid'] = retrieved_book.bookid
+        book['title'] = retrieved_book.title
+        book['author'] = retrieved_book.author
+        book['isbn'] = retrieved_book.isbn
+        book['category'] = retrieved_book.category
+        book['year'] = retrieved_book.year
+        book['language'] = retrieved_book.language
+        if type(retrieved_book) is AudioBook: 
+            book['book_type'] = "Audiobook"
+            book['audioformat'] = retrieved_book.audio_format
+        elif type(retrieved_book) is Periodical: book['book_type'] = "Periodical"
+        else: book['book_type'] = "Book"
 
     return render_template('viewbook.html', book=book)
 
@@ -250,6 +265,9 @@ def return_book():
     """
     cursor.execute(update_query, (current_date, returnId))
     db.commit()
+    cursor.execute("SELECT borrowerid, bookid FROM borrowed WHERE borrowedid = %s", (returnId, ))
+    record = cursor.fetchone()
+    borrowed_items.return_item(record['borrowerid'], record['bookid'])
     return redirect(url_for("borrowed"))
 
 @app.route('/borrowed', methods=['GET'])
@@ -311,8 +329,14 @@ def search_book_borrower():
         borrowerid = session['userid']
         
         # Default query to fetch all books that the borrower has not borrowed
+        # query = """
+        # SELECT b.bookid, b.title, b.author, b.isbn, b.category, b.year, b.language
+        # FROM book b
+        # LEFT JOIN borrowed br ON b.bookid = br.bookid AND br.borrowerid = %s
+        # WHERE (br.bookid IS NULL OR br.returndate != '0000-00-00 00:00:00')
+        # """
         query = """
-        SELECT b.bookid, b.title, b.author, b.isbn, b.category, b.year, b.language
+        SELECT b.bookid
         FROM book b
         LEFT JOIN borrowed br ON b.bookid = br.bookid AND br.borrowerid = %s
         WHERE (br.bookid IS NULL OR br.returndate != '0000-00-00 00:00:00')
@@ -326,8 +350,22 @@ def search_book_borrower():
         
         cursor.execute(query, params)
         books = cursor.fetchall()
+
+        books_list = [dict().fromkeys([
+            'bookid', 'title', 'author', 'isbn', 'category', 'year', 'language'
+        ], None) for _ in range(len(books))]
+
+        for i in range(len(books)):
+            retrieved_book = library_tree.search(int(books[i]['bookid']))
+            books_list[i]['bookid'] = retrieved_book.bookid
+            books_list[i]['title'] = retrieved_book.title
+            books_list[i]['author'] = retrieved_book.author
+            books_list[i]['isbn'] = retrieved_book.isbn
+            books_list[i]['category'] = retrieved_book.category
+            books_list[i]['year'] = retrieved_book.year
+            books_list[i]['language'] = retrieved_book.language
         
-        return render_template("borrower.html", books=books)
+        return render_template("borrower.html", books=books_list)
     return redirect(url_for('login'))
 
 @app.route('/admin', methods=['GET'])
@@ -366,22 +404,35 @@ def adminsearch():
 def admin_view_book():
     # SQL query to get book details and its type (book, periodical, audiobook)
     viewBookId = request.args.get('bookid')
-    sql_query = """
-    SELECT b.bookid, b.title, b.author, b.isbn, b.category, b.year, b.language,
-            CASE
-                WHEN p.bookid IS NOT NULL THEN 'Periodical'
-                WHEN a.bookid IS NOT NULL THEN 'Audiobook'
-                ELSE 'Book'
-            END AS book_type,
-            a.audioformat
-    FROM book b
-    LEFT JOIN periodical p ON b.bookid = p.bookid
-    LEFT JOIN audiobook a ON b.bookid = a.bookid
-    WHERE b.bookid = %s
-    """
+    # sql_query = """
+    # SELECT b.bookid, b.title, b.author, b.isbn, b.category, b.year, b.language,
+    #         CASE
+    #             WHEN p.bookid IS NOT NULL THEN 'Periodical'
+    #             WHEN a.bookid IS NOT NULL THEN 'Audiobook'
+    #             ELSE 'Book'
+    #         END AS book_type,
+    #         a.audioformat
+    # FROM book b
+    # LEFT JOIN periodical p ON b.bookid = p.bookid
+    # LEFT JOIN audiobook a ON b.bookid = a.bookid
+    # WHERE b.bookid = %s
+    # """
 
-    cursor.execute(sql_query, (viewBookId,))
-    book = cursor.fetchone()
+    book = dict().fromkeys(['bookid', 'title', 'author', 'isbn', 'category', 'year', 'language', 'book_type', 'audioformat'], None)
+    retrieved_book = library_tree.search(int(viewBookId))
+    if retrieved_book:
+        book['bookid'] = retrieved_book.bookid
+        book['title'] = retrieved_book.title
+        book['author'] = retrieved_book.author
+        book['isbn'] = retrieved_book.isbn
+        book['category'] = retrieved_book.category
+        book['year'] = retrieved_book.year
+        book['language'] = retrieved_book.language
+        if type(retrieved_book) is AudioBook: 
+            book['book_type'] = "Audiobook"
+            book['audioformat'] = retrieved_book.audio_format
+        elif type(retrieved_book) is Periodical: book['book_type'] = "Periodical"
+        else: book['book_type'] = "Book"
 
     return render_template('adminviewbook.html', book=book)
 
