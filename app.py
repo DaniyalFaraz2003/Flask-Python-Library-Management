@@ -461,6 +461,13 @@ def add_book():
                 cursor.execute('INSERT INTO periodical (bookid) VALUES (%s)', (book_id,))
             db.commit()
             
+            if book_type == 'audio':
+                library_tree.insert(AudioBook(book_id, author, title, isbn, category, year, language, audio_format))
+            elif book_type == 'periodical':
+                library_tree.insert(Periodical(book_id, author, title, isbn, category, year, language))
+            else:
+                library_tree.insert(Book(book_id, author, title, isbn, category, year, language))
+
             return redirect(url_for('admin'))
         return render_template('add_book.html')
     return redirect(url_for('login'))
@@ -505,6 +512,7 @@ def edit_book(bookid):
                     cursor.execute('INSERT INTO periodical (bookid) VALUES (%s)', (bookid,))
             
             db.commit()
+            populate_library_tree()
             return redirect(url_for('admin'))
         
         cursor.execute('SELECT * FROM book WHERE bookid=%s', (bookid,))
@@ -534,15 +542,27 @@ def delete_book(bookid):
         cursor.execute('DELETE FROM periodical WHERE bookid=%s', (bookid,))
         cursor.execute('DELETE FROM book WHERE bookid = %s', (bookid,))
         db.commit()
+        populate_library_tree()
         return redirect(url_for('admin'))
     return redirect(url_for('login'))
 
 @app.route('/borrowers')
 def borrowers():
     if 'loggedin' in session and session['role'] == 'admin':
-        query = "SELECT borrowerid, firstname, lastname, email FROM borrower WHERE email != 'admin@admin.com'"
-        cursor.execute(query)
-        borrowers = cursor.fetchall()
+        # query = "SELECT borrowerid, firstname, lastname, email FROM borrower WHERE email != 'admin@admin.com'"
+        # cursor.execute(query)
+        # borrowers = cursor.fetchall()
+        all_borrowers = borrower_list.getAllBorrowers()
+        borrowers = []
+        for i in range(len(all_borrowers)):
+            if all_borrowers[i].email == 'admin@admin.com': continue
+            borrower = dict().fromkeys(['borrowerid', 'firstname', 'lastname', 'email'], None)
+            borrower['borrowerid'] = all_borrowers[i].borrowerid
+            borrower['firstname'] = all_borrowers[i].firstname
+            borrower['lastname'] = all_borrowers[i].lastname
+            borrower['email'] = all_borrowers[i].email
+            borrowers.append(borrower)
+
         return render_template('borrowers.html', borrowers=borrowers)
     return redirect(url_for('login'))
 

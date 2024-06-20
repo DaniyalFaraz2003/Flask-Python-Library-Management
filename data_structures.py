@@ -81,6 +81,14 @@ class BorrowerList:
                 return current.borrower
             current = current.next
         return None
+    
+    def getAllBorrowers(self):
+        result = []
+        current = self.head
+        while current:
+            result.append(current.borrower)
+            current = current.next
+        return result
 
     def find(self, borrowerid):
         current = self.head
